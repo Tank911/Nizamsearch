@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Nizam Search - Bee As Search</title>
+    <style>
+        :root {
+            --bg: #eef3f8;
+            --surface: #ffffff;
+            --ink: #14233a;
+            --muted: #5b6b82;
+            --line: #cfd9e6;
+            --accent: #1f5fd6;
+            --accent-ink: #ffffff;
+            color-scheme: light;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0e1623;
+                --surface: #172234;
+                --ink: #e7eef8;
+                --muted: #93a3ba;
+                --line: #2a3a52;
+                --accent: #6ea2ff;
+                --accent-ink: #0e1623;
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #0e1623;
+            --surface: #172234;
+            --ink: #e7eef8;
+            --muted: #93a3ba;
+            --line: #2a3a52;
+            --accent: #6ea2ff;
+            --accent-ink: #0e1623;
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px
+        }
+
+        main {
+            width: 100%;
+            max-width: 640px
+        }
+
+        h1 {
+            font-size: clamp(2rem, 6vw, 3rem);
+            font-weight: 700;
+            letter-spacing: -.02em;
+            margin: 0 0 6px
+        }
+
+        p.sub {
+            margin: 0 0 24px;
+            color: var(--muted);
+            font-size: 1rem
+        }
+
+        .box {
+            display: flex;
+            gap: 8px;
+            background: var(--surface);
+            border: 1.5px solid var(--line);
+            border-radius: 14px;
+            padding: 8px
+        }
+
+        .box:focus-within {
+            border-color: var(--accent)
+        }
+
+        input[type=search] {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-size: 1.1rem;
+            padding: 10px 12px
+        }
+
+        button.go {
+            border: 0;
+            background: var(--accent);
+            color: var(--accent-ink);
+            font: inherit;
+            font-weight: 600;
+            padding: 0 22px;
+            border-radius: 9px;
+            cursor: pointer
+        }
+
+        button.go:focus-visible,
+        .chip:focus-visible,
+        .tab:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px
+        }
+
+        .chip,
+        .tab {
+            font: inherit;
+            font-size: .92rem;
+            border: 1.5px solid var(--line);
+            background: transparent;
+            color: var(--ink);
+            padding: 6px 14px;
+            border-radius: 999px;
+            cursor: pointer
+        }
+
+        .chip[aria-pressed="true"],
+        .tab[aria-pressed="true"] {
+            background: var(--ink);
+            color: var(--bg);
+            border-color: var(--ink)
+        }
+
+        .label {
+            margin: 22px 0 0;
+            font-size: .9rem;
+            color: var(--muted)
+        }
+
+        .hint {
+            margin-top: 26px;
+            font-size: .85rem;
+            color: var(--muted)
+        }
+
+        kbd {
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            padding: 1px 6px;
+            font: inherit
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Nizam Search</h1>
+        <h2>Search the web</h2>
+        <p class="sub">Type a question, pick an engine, press Enter.</p>
+
+        <div class="box" role="search">
+            <input id="q" type="search" placeholder="What do you want to find?" autocomplete="off" autofocus aria-label="Search query">
+            <button class="go" id="go" type="button">Search</button>
+        </div>
+
+        <p class="label">Engine</p>
+        <div class="row" id="engines"></div>
+
+        <p class="label">Results type</p>
+        <div class="row" id="kinds"></div>
+
+        <p class="hint">Press <kbd>/</kbd> to jump to the search box. Results open on the engine’s own site.</p>
+    </main>
+
+    <script>
+        const ENGINES = {
+            DuckDuckGo: {
+                web: "https://duckduckgo.com/?q=",
+                images: "https://duckduckgo.com/?iax=images&ia=images&q=",
+                news: "https://duckduckgo.com/?iar=news&ia=news&q="
+            },
+            Google: {
+                web: "https://www.google.com/search?q=",
+                images: "https://www.google.com/search?tbm=isch&q=",
+                news: "https://www.google.com/search?tbm=nws&q="
+            },
+            Bing: {
+                web: "https://www.bing.com/search?q=",
+                images: "https://www.bing.com/images/search?q=",
+                news: "https://www.bing.com/news/search?q="
+            },
+            Brave: {
+                web: "https://search.brave.com/search?q=",
+                images: "https://search.brave.com/images?q=",
+                news: "https://search.brave.com/news?q="
+            },
+           PrivacyWall: {
+                web: "https://www.privacywall.org/search/secure?q=",
+                images: "https://www.privacywall.org/images/?q=",
+                news: ""
+            }
+        };
+        const KINDS = {
+            web: "Web",
+            images: "Images",
+            news: "News"
+        };
+        let engine = "DuckDuckGo",
+            kind = "web";
+        try {
+            const e = localStorage.getItem("ws-engine");
+            if (e && ENGINES[e]) engine = e;
+        } catch (err) {}
+
+        const q = document.getElementById("q");
+
+        function render() {
+            const eb = document.getElementById("engines");
+            eb.innerHTML = "";
+            Object.keys(ENGINES).forEach(name => {
+                const b = document.createElement("button");
+                b.className = "chip";
+                b.type = "button";
+                b.textContent = name;
+                b.setAttribute("aria-pressed", String(name === engine));
+                b.onclick = () => {
+                    engine = name;
+                    try {
+                        localStorage.setItem("ws-engine", name);
+                    } catch (err) {}
+                    render();
+                    q.focus();
+                };
+                eb.appendChild(b);
+            });
+            const kb = document.getElementById("kinds");
+            kb.innerHTML = "";
+            Object.keys(KINDS).forEach(k => {
+                const b = document.createElement("button");
+                b.className = "tab";
+                b.type = "button";
+                b.textContent = KINDS[k];
+                b.setAttribute("aria-pressed", String(k === kind));
+                b.onclick = () => {
+                    kind = k;
+                    render();
+                    q.focus();
+                };
+                kb.appendChild(b);
+            });
+        }
+
+        function search() {
+            const text = q.value.trim();
+            if (!text) {
+                q.focus();
+                return;
+            }
+            window.open(ENGINES[engine][kind] + encodeURIComponent(text), "_blank", "noopener");
+        }
+        document.getElementById("go").onclick = search;
+        q.addEventListener("keydown", e => {
+            if (e.key === "Enter") search();
+        });
+        document.addEventListener("keydown", e => {
+            if (e.key === "/" && document.activeElement !== q) {
+                e.preventDefault();
+                q.focus();
+            }
+        });
+        render();
+    </script>
+</body>
+
+</html>
